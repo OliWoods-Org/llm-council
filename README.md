@@ -190,7 +190,7 @@ We need developers, ML researchers, and people who care about AI decision qualit
 ---
 
 <p align="center">
-  <strong>An <a href="https://oliwoodsfoundation.org">OliWoods Foundation</a> Project</strong>
+  <strong>An <a href="https://mama.oliwoods.ai/foundation">OliWoods Foundation</a> Project</strong>
   <br><em>Better decisions through multi-model deliberation</em>
   <br><br>
   <sub>
