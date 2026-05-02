@@ -185,3 +185,14 @@ export type ComplexityScore = z.infer<typeof ComplexityScore>;
 // ============================================================================
 
 export { runCouncil, scoreComplexity, getConsensusLevel } from "./council.js";
+export {
+  queryAllMembers,
+  queryMembers,
+  assertPromptLength,
+  type MemberResult,
+} from "./llm-calls.js";
+export {
+  MAX_PROMPT_CHARS,
+  MAX_JSON_BODY_BYTES,
+  ANTHROPIC_MAX_TOKENS,
+} from "./config.js";

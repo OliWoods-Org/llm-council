@@ -162,16 +162,24 @@ GET  /api/council/sessions → list recent sessions
 ```bash
 git clone https://github.com/OliWoods-Org/llm-council.git
 cd llm-council
-
-# Set API keys
-export ANTHROPIC_API_KEY=...
-export OPENAI_API_KEY=...
-export GOOGLE_AI_API_KEY=...
-export GROQ_API_KEY=...
-
-# Run a council session
-npm start -- --task "Design a database schema for a marketplace" --mode full
+npm install && npm run build
 ```
+
+Copy `.env.example` to `.env` and set provider keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY` or `GEMINI_API_KEY`, `GROQ_API_KEY`).
+
+```bash
+# Local UI + API: POST /api/ask, GET /api/health
+npm run dev:server
+# Open http://127.0.0.1:3847/
+
+# CLI: same prompt to all models
+npm run test:llms -- "Your question here"
+
+# Unit tests (routing/scoring helpers)
+npm test
+```
+
+See **[IMPROVEMENTS.md](./IMPROVEMENTS.md)** for roadmap and MAMA integration notes.
 
 Or use via [MAMA](https://mama.oliwoods.ai): `/council Design a database schema for a marketplace`
 

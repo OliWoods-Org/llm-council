@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LLM Council — ask all models</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f1115;
+        --panel: #181c24;
+        --border: #2a3140;
+        --text: #e8eaed;
+        --muted: #9aa0a6;
+        --accent: #7c9eff;
+        --err: #f28b82;
+        --ok: #81c995;
+        font-family: "SF Pro Text", system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      main {
+        max-width: 52rem;
+        margin: 0 auto;
+        padding: 1.5rem 1.25rem 3rem;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem;
+      }
+      p.lead {
+        margin: 0 0 1.25rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      label {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-bottom: 0.35rem;
+      }
+      textarea {
+        width: 100%;
+        min-height: 6rem;
+        box-sizing: border-box;
+        padding: 0.75rem 0.85rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        font: inherit;
+        resize: vertical;
+      }
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        margin-top: 0.85rem;
+      }
+      button {
+        font: inherit;
+        padding: 0.55rem 1.1rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, #2a3142, #222832);
+        color: var(--text);
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) {
+        border-color: var(--accent);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .status {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      section.results {
+        margin-top: 2rem;
+      }
+      section.results h2 {
+        font-size: 1rem;
+        margin: 0 0 1rem;
+      }
+      article.card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1rem 1.1rem;
+        margin-bottom: 1rem;
+        background: var(--panel);
+      }
+      article.card h3 {
+        margin: 0 0 0.35rem;
+        font-size: 1rem;
+      }
+      article.card .meta {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-bottom: 0.65rem;
+      }
+      article.card pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.88rem;
+      }
+      article.card .latency {
+        font-size: 0.78rem;
+        color: var(--ok);
+        margin-top: 0.5rem;
+      }
+      article.card .error {
+        color: var(--err);
+        font-size: 0.9rem;
+      }
+      p.charcount {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin: 0.15rem 0 0.4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>LLM Council</h1>
+      <p class="lead">
+        One question is sent to every default council model in parallel. Set API keys in
+        <code>.env</code> at the repo root.
+      </p>
+      <label for="q">Your question</label>
+      <p class="charcount" id="charcount" aria-live="polite">0 / —</p>
+      <textarea id="q" placeholder="Ask something…" aria-describedby="charcount"></textarea>
+      <div class="row">
+        <button type="button" id="send">Ask all models</button>
+        <span class="status" id="status"></span>
+      </div>
+      <section class="results" id="results" hidden>
+        <h2>Responses</h2>
+        <div id="cards"></div>
+      </section>
+    </main>
+    <script>
+      const q = document.getElementById("q");
+      const send = document.getElementById("send");
+      const statusEl = document.getElementById("status");
+      const results = document.getElementById("results");
+      const cards = document.getElementById("cards");
+      const charcount = document.getElementById("charcount");
+      let maxPromptChars = 32000;
+
+      function updateCharCount() {
+        const n = q.value.length;
+        charcount.textContent = n + " / " + maxPromptChars;
+        if (n > maxPromptChars) {
+          charcount.style.color = "var(--err)";
+        } else {
+          charcount.style.color = "var(--muted)";
+        }
+      }
+
+      fetch("/api/health")
+        .then((r) => r.json())
+        .then((d) => {
+          if (typeof d.maxPromptChars === "number") {
+            maxPromptChars = d.maxPromptChars;
+          }
+          updateCharCount();
+        })
+        .catch(() => updateCharCount());
+
+      q.addEventListener("input", updateCharCount);
+
+      send.addEventListener("click", async () => {
+        const prompt = q.value.trim();
+        if (!prompt) {
+          statusEl.textContent = "Enter a question.";
+          return;
+        }
+        if (prompt.length > maxPromptChars) {
+          statusEl.textContent = "Prompt exceeds " + maxPromptChars + " characters.";
+          return;
+        }
+        send.disabled = true;
+        statusEl.textContent = "Calling all models…";
+        results.hidden = true;
+        cards.innerHTML = "";
+
+        try {
+          const res = await fetch("/api/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            statusEl.textContent = data.error || res.statusText || "Request failed";
+            return;
+          }
+          statusEl.textContent =
+            "Done — " + (data.results?.filter((r) => r.ok).length ?? 0) + " ok, " +
+            (data.results?.filter((r) => !r.ok).length ?? 0) + " errors";
+          results.hidden = false;
+
+          for (const r of data.results || []) {
+            const art = document.createElement("article");
+            art.className = "card";
+            const h = document.createElement("h3");
+            h.textContent = r.name;
+            art.appendChild(h);
+            const meta = document.createElement("div");
+            meta.className = "meta";
+            meta.textContent = r.memberId + " · " + r.provider + " · " + r.model;
+            art.appendChild(meta);
+            if (r.ok) {
+              const pre = document.createElement("pre");
+              pre.textContent = r.text.trim();
+              art.appendChild(pre);
+              const lat = document.createElement("div");
+              lat.className = "latency";
+              lat.textContent = "Latency: " + r.ms + " ms";
+              art.appendChild(lat);
+            } else {
+              const err = document.createElement("div");
+              err.className = "error";
+              err.textContent = r.error;
+              art.appendChild(err);
+            }
+            cards.appendChild(art);
+          }
+        } catch (e) {
+          statusEl.textContent = e instanceof Error ? e.message : String(e);
+        } finally {
+          send.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
