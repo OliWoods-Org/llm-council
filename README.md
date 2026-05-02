@@ -72,6 +72,18 @@
 | **Gemini Flash** | Google | Member | Speed, multimodal, large context |
 | **Llama 3 70B** | Groq (free) | Member | Open-source perspective, zero cost |
 
+## Council presets (standard, VC, humanitarian)
+
+This repository consolidates what used to be described as separate “product flavors” into **three presets** that share the **same five underlying models** (so one `.env` drives every preset). Only names and role descriptions change:
+
+| Preset | Id | When to use |
+|--------|-----|-------------|
+| **Standard / MAMA** | `standard` | General engineering, product, and MAMA-routed work (default). |
+| **VC deal analysis** | `vc` | Diligence-style framing — memos, terms, market story, data-room scale. |
+| **Humanitarian & impact** | `humanitarian` | Ethics, stakeholders, field constraints, social-impact programs. |
+
+**API / CLI:** pass `variant` in JSON (`POST /api/ask`) or `--variant=vc` / `--variant=humanitarian` with `npm run test:llms`. Use `GET /api/councils` for labels and descriptions.
+
 ## Why This Works
 
 Research shows multi-model deliberation outperforms any single model:
@@ -172,8 +184,12 @@ Copy `.env.example` to `.env` and set provider keys (`ANTHROPIC_API_KEY`, `OPENA
 npm run dev:server
 # Open http://127.0.0.1:3847/
 
-# CLI: same prompt to all models
+# CLI: all models on the standard council (default preset)
 npm run test:llms -- "Your question here"
+
+# VC or humanitarian preset (same APIs, different member labels)
+npm run test:llms -- --variant=vc "Summarize key risks for this seed round"
+npm run test:llms -- --variant=humanitarian "Prioritize aid given constrained budget"
 
 # Unit tests (routing/scoring helpers)
 npm test
@@ -191,7 +207,7 @@ We need developers, ML researchers, and people who care about AI decision qualit
 
 | Project | Description |
 |---------|-------------|
-| [Humanitarian Council](https://github.com/OliWoods-Org/humanitarian-council) | Multi-perspective deliberation for social impact decisions |
+| Humanitarian preset (`humanitarian`) | In-repo — use council variant `humanitarian` (see above) |
 | [MAMA](https://mama.oliwoods.ai) | AI Chief of Staff — 85+ agent teams |
 | [Karpathy's llm-council](https://github.com/karpathy/llm-council) | Original inspiration |
 

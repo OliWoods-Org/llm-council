@@ -8,15 +8,18 @@
  *   GROQ_API_KEY       — Llama on Groq
  *
  * Usage:
- *   pnpm test:llms -- "Your prompt here"
- *   pnpm test:llms   (uses a default prompt)
+ *   npm run test:llms -- "Your prompt here"
+ *   npm run test:llms -- --variant=vc "Grade this seed deck..."
+ *   npm run test:llms -- --variant=humanitarian "Aid allocation query..."
  */
 
 import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-import { queryAllMembers } from "../src/llm-calls.js";
+import { parseCouncilVariantId } from "../src/council-registry.js";
+import type { CouncilVariantId } from "../src/council-registry.js";
+import { queryCouncilVariant } from "../src/llm-calls.js";
 
 config({ path: join(dirname(fileURLToPath(import.meta.url)), "..", ".env") });
 
@@ -26,14 +29,37 @@ function divider(char = "═"): string {
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
+  let variant: CouncilVariantId = "standard";
+  const words: string[] = [];
+
+  for (const a of argv) {
+    const m = /^--variant=(.+)$/i.exec(a);
+    if (m) {
+      const v = parseCouncilVariantId(m[1].trim());
+      if (v) variant = v;
+      else {
+        console.error('Use --variant=standard|vc|humanitarian');
+        process.exit(1);
+      }
+      continue;
+    }
+    if (a === "--variant" || a === "-V") {
+      console.error("Use --variant=standard (or vc, humanitarian)");
+      process.exit(1);
+    }
+    words.push(a);
+  }
+
   const prompt =
-    argv.length > 0
-      ? argv.join(" ")
+    words.length > 0
+      ? words.join(" ")
       : "In one short paragraph, what is 2+2 and why is consensus among calculators usually unanimous?";
 
-  console.log(`${divider()}\nPrompt (${prompt.length} chars):\n${prompt}\n${divider()}\n`);
+  console.log(
+    `${divider()}\nVariant: ${variant}\nPrompt (${prompt.length} chars):\n${prompt}\n${divider()}\n`,
+  );
 
-  const settled = await queryAllMembers(prompt);
+  const settled = await queryCouncilVariant(variant, prompt);
 
   for (const result of settled) {
     const header = `${result.name} (${result.memberId}) — ${result.provider}/${result.model}`;

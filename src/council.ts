@@ -14,7 +14,7 @@ import type {
   Vote,
   Dissent,
 } from "./index.js";
-import { DEFAULT_COUNCIL } from "./index.js";
+import { DEFAULT_COUNCIL } from "./councils/standard.js";
 
 // ============================================================================
 // Complexity Scoring & Auto-Routing

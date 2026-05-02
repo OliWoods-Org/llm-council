@@ -45,6 +45,21 @@
         color: var(--muted);
         margin-bottom: 0.35rem;
       }
+      select {
+        width: 100%;
+        max-width: 28rem;
+        margin-bottom: 1rem;
+        padding: 0.5rem 0.65rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        font: inherit;
+      }
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
       textarea {
         width: 100%;
         min-height: 6rem;
@@ -136,10 +151,13 @@
   <body>
     <main>
       <h1>LLM Council</h1>
-      <p class="lead">
-        One question is sent to every default council model in parallel. Set API keys in
-        <code>.env</code> at the repo root.
+      <p class="lead" id="lead">
+        One question is sent to every model on the selected council in parallel. Presets: Standard
+        (MAMA), VC deal analysis, and humanitarian &amp; impact — same five providers, different
+        role labels. Set API keys in <code>.env</code> at the repo root.
       </p>
+      <label for="variant">Council preset</label>
+      <select id="variant" aria-describedby="lead"></select>
       <label for="q">Your question</label>
       <p class="charcount" id="charcount" aria-live="polite">0 / —</p>
       <textarea id="q" placeholder="Ask something…" aria-describedby="charcount"></textarea>
@@ -159,7 +177,41 @@
       const results = document.getElementById("results");
       const cards = document.getElementById("cards");
       const charcount = document.getElementById("charcount");
+      const variantEl = document.getElementById("variant");
       let maxPromptChars = 32000;
+
+      function fillVariants(list) {
+        variantEl.innerHTML = "";
+        for (const v of list) {
+          const opt = document.createElement("option");
+          opt.value = v.id;
+          opt.textContent = v.label + " — " + v.description;
+          variantEl.appendChild(opt);
+        }
+      }
+
+      fetch("/api/councils")
+        .then((r) => r.json())
+        .then((d) => {
+          if (Array.isArray(d.variants) && d.variants.length) {
+            fillVariants(d.variants);
+          }
+        })
+        .catch(() => {
+          fillVariants([
+            {
+              id: "standard",
+              label: "Standard / MAMA",
+              description: "General deliberation",
+            },
+            { id: "vc", label: "VC deal analysis", description: "Diligence-oriented" },
+            {
+              id: "humanitarian",
+              label: "Humanitarian & impact",
+              description: "Ethics and field impact",
+            },
+          ]);
+        });
 
       function updateCharCount() {
         const n = q.value.length;
@@ -202,7 +254,7 @@
           const res = await fetch("/api/ask", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt }),
+            body: JSON.stringify({ prompt, variant: variantEl.value }),
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {

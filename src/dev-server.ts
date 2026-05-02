@@ -11,8 +11,9 @@ import { createServer, type IncomingMessage } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { listCouncilVariants, parseCouncilVariantId } from "./council-registry.js";
 import { MAX_JSON_BODY_BYTES, MAX_PROMPT_CHARS } from "./config.js";
-import { queryAllMembers } from "./llm-calls.js";
+import { queryCouncilVariant } from "./llm-calls.js";
 
 /** Run `npm run dev:server` from the repo root so `.env` and `public/` resolve. */
 const root = process.cwd();
@@ -45,6 +46,25 @@ async function handleAsk(body: string): Promise<Response> {
     });
   }
 
+  const variantRaw =
+    typeof parsed === "object" && parsed !== null && "variant" in parsed
+      ? (parsed as { variant: unknown }).variant
+      : undefined;
+
+  const variant =
+    variantRaw === undefined || variantRaw === null || variantRaw === ""
+      ? "standard"
+      : parseCouncilVariantId(variantRaw);
+
+  if (variant === null) {
+    return new Response(
+      JSON.stringify({
+        error: "Invalid \"variant\" — use standard, vc, or humanitarian",
+      }),
+      { status: 400, headers: { "content-type": "application/json" } },
+    );
+  }
+
   if (prompt.length > MAX_PROMPT_CHARS) {
     return new Response(
       JSON.stringify({
@@ -54,9 +74,9 @@ async function handleAsk(body: string): Promise<Response> {
     );
   }
 
-  const results = await queryAllMembers(prompt);
+  const results = await queryCouncilVariant(variant, prompt);
   return new Response(
-    JSON.stringify({ prompt, results }, null, 2),
+    JSON.stringify({ prompt, variant, results }, null, 2),
     { headers: { "content-type": "application/json; charset=utf-8" } },
   );
 }
@@ -107,8 +127,15 @@ const server = createServer(async (req, res) => {
         port: PORT,
         maxPromptChars: MAX_PROMPT_CHARS,
         maxJsonBodyBytes: MAX_JSON_BODY_BYTES,
+        councils: listCouncilVariants(),
       }),
     );
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/councils") {
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ variants: listCouncilVariants() }));
     return;
   }
 

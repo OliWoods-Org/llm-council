@@ -8,10 +8,12 @@ This document tracks enhancements for the library, dev server, and MAMA integrat
 
 - **Centralized limits** — `src/config.ts`: max prompt length, JSON body size, Anthropic `max_tokens`.
 - **HTTP hardening** — `POST /api/ask` rejects oversized bodies (413), validates prompt length (400), `GET /api/health` for uptime checks.
-- **Public API** — `queryAllMembers`, `queryMembers`, `MemberResult` exported from package entry.
-- **Unit tests** — Vitest coverage for `scoreComplexity` and `getConsensusLevel`.
+- **Public API** — `queryAllMembers`, `queryCouncilVariant`, `queryMembers`, `MemberResult` exported from package entry.
+- **Council presets** — `standard`, `vc`, `humanitarian` in `src/councils/` + `src/council-registry.ts` (one repo instead of multiple council repos).
+- **HTTP discovery** — `GET /api/councils` lists presets; `POST /api/ask` accepts `{ variant }`.
+- **Unit tests** — Vitest for scoring (`council.test.ts`) and registry (`council-registry.test.ts`).
 - **Developer UX** — `.env.example`, `.gitignore` includes `.env`, npm `test` script.
-- **UI** — Character count and limit hint on the dev prompt textarea.
+- **UI** — Character count; dev UI preset dropdown for council variant.
 
 ---
 

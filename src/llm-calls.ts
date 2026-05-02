@@ -3,8 +3,12 @@
  */
 
 import { ANTHROPIC_MAX_TOKENS, MAX_PROMPT_CHARS } from "./config.js";
+import {
+  getCouncilMembers,
+  type CouncilVariantId,
+} from "./council-registry.js";
 import type { CouncilMember } from "./index.js";
-import { DEFAULT_COUNCIL } from "./index.js";
+import { DEFAULT_COUNCIL } from "./councils/standard.js";
 
 const ANTHROPIC_VERSION = "2023-06-01";
 
@@ -191,4 +195,14 @@ export async function queryMembers(
  */
 export async function queryAllMembers(prompt: string): Promise<MemberResult[]> {
   return queryMembers(DEFAULT_COUNCIL, prompt);
+}
+
+/**
+ * Query all members of a named council preset (standard, vc, humanitarian).
+ */
+export async function queryCouncilVariant(
+  variant: CouncilVariantId,
+  prompt: string,
+): Promise<MemberResult[]> {
+  return queryMembers(getCouncilMembers(variant), prompt);
 }
